@@ -85,6 +85,26 @@ class Mesh_ListItem(bpy.types.PropertyGroup):
                                                     description='A technique describing the effect used to render the geometry.',
                                                     default='')
 
+    bake_subpanel_is_expanded: bpy.props.BoolProperty(name='Bake settings', default=True)
+
+    bake_subpanel_enable: bpy.props.BoolProperty(name='Enable baking for this node', default=True)
+    bake_subpanel_bake_dir: bpy.props.StringProperty(name='Baking output directory', default='')
+    bake_subpanel_bake_width: bpy.props.IntProperty(name='Bake width', default=1024, min=1)
+    bake_subpanel_bake_height: bpy.props.IntProperty(name='Bake height', default=1024, min=1)
+    bake_subpanel_auto_unwrap_if_needed: bpy.props.BoolProperty(name='Smart UV unwrap if needed', default=True)
+
+
+    mesh_bake_type: bpy.props.EnumProperty(# [(identifier, name, description, icon, number), ...]
+                                           items=[
+                                                  ('COMBINED', 'Combined', "Bake combined (bakes all materials, textures, and lighting except specularity)"),
+                                           ],
+                                           name="Bake type",
+                                           description="Whether to bake Cycles shaders and lightning to image textures",
+                                           default=None,
+                                           options={'ANIMATABLE'},
+                                           update=None,
+                                           get=None,
+                                           set=None)
 
 class MeshUIList(UIList):
     """A list displayed in the GLSL tab."""
@@ -237,6 +257,31 @@ class RamsesExportOperator(bpy.types.Operator):
             row = layout.row()
             row.prop(item, "mesh_render_technique")
 
+            self.draw_bake_submenu(item, layout, scn)
+
+    def draw_bake_submenu(self, obj, layout, scn):
+        # This is how we draw collapsible submenus
+        # The BoolProperty controls the drawing for this
+        row = layout.row()
+
+        row.prop(obj,
+                 "bake_subpanel_is_expanded",
+                 icon="TRIA_DOWN" if obj.bake_subpanel_is_expanded else "TRIA_RIGHT",
+                 icon_only=False, emboss=False) # Set icon_only to True if you only want an arrow
+
+        if obj.bake_subpanel_is_expanded:
+            row = layout.row()
+            row.prop(obj, "bake_subpanel_enable")
+            row = layout.row()
+            row.prop(obj, "mesh_bake_type")
+            row = layout.row()
+            row.prop(obj, "bake_subpanel_bake_width")
+            row = layout.row()
+            row.prop(obj, "bake_subpanel_bake_height")
+            row = layout.row()
+            row.prop(obj, "bake_subpanel_bake_dir")
+            row = layout.row()
+            row.prop(obj, "bake_subpanel_auto_unwrap_if_needed")
     # ------- User Interface --------------------
 
     @classmethod
