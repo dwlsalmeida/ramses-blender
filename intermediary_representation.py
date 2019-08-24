@@ -267,6 +267,23 @@ class Node():
 
         return self.find(attribute='blender_object', value=blender_object, n=0)
 
+    def find_view_layer(self) -> Node:
+        """Finds the view layer for this node, if any"""
+
+        if isinstance(self, ViewLayerNode):
+            return self
+
+        node = self
+        parent = self.parent
+
+        while parent:
+            node = node.parent
+            if isinstance(node, ViewLayerNode):
+                return node
+            parent = node.parent
+
+        return None
+
     def add_child(self, node: Node):
         node.parent = self
         self.children.append(node)
@@ -506,11 +523,24 @@ class MeshNode(Node):
         self.mesh = None
         self.vertexformat = {}
         self.init_memory_mesh()
+        self.created_UVs = []
+        self.created_material_nodes = []
+        self.created_images = []
 
     def teardown(self):
         super().teardown()
         log.debug(f'Freeing allocated BMesh object: "{self.mesh}"')
         self.mesh.free()
+
+        for uv in self.created_UVs:
+            self.remove_uv_layer(uv)
+            self.created_UVs.remove(uv)
+
+        for node in self.created_material_nodes:
+            self.remove_material_node(node)
+
+        for image in self.created_images:
+            bpy.data.images.remove(image)
 
     def malformed(self):
         faces = self.get_faces()
@@ -580,7 +610,7 @@ class MeshNode(Node):
         pass
 
     def get_materials(self):
-        pass
+        return self.blender_object.data.materials
 
     def debug(self):
         print(self.get_vertices())
@@ -592,6 +622,69 @@ class MeshNode(Node):
     def update(self):
         self.mesh.free()
         self.init_memory_mesh()
+
+    def is_UV_unwrapped(self):
+        """Whether the user has UV unwrapped this node.
+        UV unwrapping is paramount for texturing"""
+        has_UV_layers = len(self.blender_object.data.uv_layers) > 0
+        if not has_UV_layers:
+            return False
+        has_active_UV_layer = self.blender_object.data.uv_layers.active is not None
+        return has_UV_layers and has_active_UV_layer
+
+    def create_UV_layer(self):
+        created_UV_count = len(self.created_UVs)
+        created_UV = self.blender_object.data.uv_layers.new(name=f'RAMSES UV layer for {self.name} #{created_UV_count + 1}')
+        self.created_UVs.append(created_UV)
+        return created_UV
+
+    def create_IMG_nodes_for_baking(self, width:int, height:int):
+
+        assert width > 0
+        assert height > 0
+
+        material_list = self.blender_object.original.data.materials
+        created_images = []
+        view_layer = self.find_view_layer()
+
+        for material in material_list:
+            material.use_nodes = True
+            node_tree = material.node_tree
+
+            if view_layer:
+                material = material.evaluated_get(view_layer.depsgraph)
+
+            image_name = f'{self.name}_{material.name}'
+            if material == self.blender_object.original.active_material:
+                image_name += '_active'
+
+            new_image_node = node_tree.nodes.new("ShaderNodeTexImage")
+            image = bpy.data.images.new(image_name, width, height)
+            new_image_node.image = image
+
+            node_tree.nodes.active = new_image_node
+            new_image_node.select = True
+
+
+            self.created_material_nodes.append(new_image_node)
+            self.created_images.append(image)
+
+            created_images.append(image)
+
+        return created_images
+
+    def remove_material_node(self, node):
+        for material in self.blender_object.original.data.materials:
+            removed_name = node.name
+            material.node_tree.nodes.remove(node)
+            assert removed_name not in material.node_tree.nodes
+        self.created_material_nodes.remove(node)
+
+    def remove_uv_layer(self, uv):
+        removed_name = uv.name
+        self.blender_object.data.uv_layers.remove(uv)
+        assert removed_name not in self.blender_object.data.uv_layers
+
 
 class CameraNode(Node):
     def __init__(self, blender_object: bpy.types.Object):
