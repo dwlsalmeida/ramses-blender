@@ -14,6 +14,7 @@ from . import RamsesPython
 from . import debug_utils
 from . import utils
 from . import shaders
+from . import baking
 import mathutils
 from typing import List, Any, Dict
 import math
@@ -38,6 +39,7 @@ class SceneRepresentation():
             custom_params = {}
         self.custom_params = custom_params
         self.shader_utils = shaders.ShaderUtils()
+        self.material_baker = baking.MaterialBaker()
         self.evaluate = evaluate
 
     @property
@@ -93,6 +95,11 @@ class SceneRepresentation():
                 assert isinstance(node, MeshNode)
                 self._Node_doCustomShaders(node, params.shader_dir, params.render_technique)
 
+            if params.material_bake.enabled:
+                visible = node.visible()
+                if visible and isinstance(node, MeshNode):
+                    self._Node_doBaking(node, params.material_bake)
+
     def _doCustomParams_ForLayers(self, custom_params):
         for layer_node in self.layers:
             self._doCustomParams(custom_params, layer_node)
@@ -107,6 +114,18 @@ class SceneRepresentation():
         self.shader_utils.clear_current_node()
         assert node.vertex_shader
         assert node.fragment_shader
+
+    def _Node_doBaking(self, node: Node, bake_config: baking.MaterialBakeConfig):
+        assert node
+        view_layer = node.find_view_layer()
+
+        if not view_layer:
+            return  # We do not export these to RAMSES, so do not bake anything
+
+        self.material_baker.set_current_node(node, bake_config)
+        self.material_baker.do_node()
+        self.material_baker.clear_current_node()
+        assert node.textures
 
 
 class Node():
@@ -283,6 +302,10 @@ class Node():
             parent = node.parent
 
         return None
+
+    def visible(self, use_original_object: bool = True) -> bool:
+        blender_object = self.blender_object.original if use_original_object else self.blender_object
+        return blender_object.visible_get()
 
     def add_child(self, node: Node):
         node.parent = self
@@ -522,6 +545,7 @@ class MeshNode(Node):
         super().__init__(blender_object, name = blender_object.name_full)
         self.mesh = None
         self.vertexformat = {}
+        self.textures = {}
         self.init_memory_mesh()
         self.created_UVs = []
         self.created_material_nodes = []

@@ -191,6 +191,16 @@ class RamsesExportOperator(bpy.types.Operator):
                 custom_params.shader_dir = list_item.mesh_GLSL_dir
                 custom_params.render_technique = list_item.mesh_render_technique
 
+            if list_item.bake_subpanel_enable:
+                custom_params.material_bake.enabled = True
+                custom_params.material_bake.bake_width = list_item.bake_subpanel_bake_width
+                custom_params.material_bake.bake_height = list_item.bake_subpanel_bake_height
+                custom_params.material_bake.auto_unwrap_if_needed = list_item.bake_subpanel_auto_unwrap_if_needed
+                if list_item.bake_subpanel_bake_dir:
+                    custom_params.material_bake.bake_dir = list_item.bake_subpanel_bake_dir
+                else:
+                    custom_params.material_bake.bake_dir = self.directory
+
             ret[list_item.name] = custom_params
         return ret
 
