@@ -41,6 +41,9 @@ class SceneRepresentation():
         self.shader_utils = shaders.ShaderUtils()
         self.material_baker = baking.MaterialBaker()
         self.evaluate = evaluate
+        # Save the render engine so we can restore it. For now we need Cycles for baking
+        self.previous_render_engine = str(self.scene.render.engine)
+        self.scene.render.engine = 'CYCLES'
 
     @property
     def camera(self):
@@ -76,6 +79,8 @@ class SceneRepresentation():
 
         for layer in self.layers:
             layer.teardown()
+
+        self.scene.render.engine = self.previous_render_engine # Restore to what we had before
 
     def _doCustomParams(self, custom_params, graph):
         for scene_object_name, params in custom_params.items():
