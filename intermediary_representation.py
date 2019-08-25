@@ -74,6 +74,9 @@ class SceneRepresentation():
     def teardown(self):
         self.graph.teardown()
 
+        for layer in self.layers:
+            layer.teardown()
+
     def _doCustomParams(self, custom_params, graph):
         for scene_object_name, params in custom_params.items():
             blender_object = self.scene.objects[scene_object_name]
@@ -564,7 +567,10 @@ class MeshNode(Node):
             self.remove_material_node(node)
 
         for image in self.created_images:
+            removed_name = image.name
             bpy.data.images.remove(image)
+            assert removed_name not in bpy.data.images
+            self.created_images.remove(image)
 
     def malformed(self):
         faces = self.get_faces()
