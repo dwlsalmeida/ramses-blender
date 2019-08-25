@@ -924,7 +924,7 @@ class ViewLayerNode(Node):
         for child_collection in self.view_layer.layer_collection.children:
             # A view layer might have children collections
             if not child_collection.exclude:
-                node = LayerCollectionNode(self.scene_graph, child_collection)
+                node = LayerCollectionNode(self.scene_graph, child_collection, parent=self)
                 self.children.append(node)
 
         # A view layer might have objects of its own
@@ -933,6 +933,9 @@ class ViewLayerNode(Node):
             graph.add_node(o)
 
         self.children.extend(graph.root.children)
+        for node in graph.root.children:
+            # Set up parenting
+            node.parent = self
 
     def evaluate(self):
         """Evaluates the ViewLayer and its hierarchy, applying modifiers and deformations"""
@@ -957,7 +960,7 @@ class ViewLayerNode(Node):
 class LayerCollectionNode(Node):
     """A node that represents a wrapper over Blender Collections"""
 
-    def __init__(self, scene_graph: SceneGraph, layer_collection: bpy.types.LayerCollection):
+    def __init__(self, scene_graph: SceneGraph, layer_collection: bpy.types.LayerCollection, parent: Node = None):
 
         super().__init__(name=f'{layer_collection.name}')
         self.scene_graph = scene_graph
@@ -965,6 +968,9 @@ class LayerCollectionNode(Node):
         self.collection = self.layer_collection.collection
         self.exclude = self.layer_collection.exclude
         self.is_visible = self.layer_collection.is_visible
+
+        if parent:
+            self.parent = parent
 
         for child_layer_collection in self.layer_collection.children:
             # A collection might have nested collections
@@ -977,3 +983,6 @@ class LayerCollectionNode(Node):
             graph.add_node(o)
 
         self.children.extend(graph.root.children)
+        for node in graph.root.children:
+            # Set up parenting
+            node.parent = self
