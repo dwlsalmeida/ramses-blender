@@ -402,7 +402,6 @@ class SceneGraph():
 
         if o.type == 'MESH':
             node = MeshNode(o)
-
             if node.malformed():
                 log.debug(f'Malformed mesh with no faces: {str(node)}. '
                           + 'Adding placeholder.')
@@ -411,10 +410,10 @@ class SceneGraph():
                             name='Placeholder node for malformed '
                                  +f'mesh with no faces: {str(old_node)}')
                 old_node.teardown()
-
-            self.shader_utils.do_node(node)
-            assert node.vertex_shader
-            assert node.fragment_shader
+            else:
+                self.shader_utils.do_node(node)
+                assert node.vertex_shader
+                assert node.fragment_shader
 
         elif o.type == 'CAMERA':
             if o.data.type == 'PERSP':
