@@ -87,7 +87,7 @@ class Mesh_ListItem(bpy.types.PropertyGroup):
 
     bake_subpanel_is_expanded: bpy.props.BoolProperty(name='Bake settings', default=True)
 
-    bake_subpanel_enable: bpy.props.BoolProperty(name='Enable baking for this node', default=True)
+    bake_subpanel_enable: bpy.props.BoolProperty(name='Enable baking for this node', default=False)
     bake_subpanel_bake_dir: bpy.props.StringProperty(name='Baking output directory', default='')
     bake_subpanel_bake_width: bpy.props.IntProperty(name='Bake width', default=1024, min=1)
     bake_subpanel_bake_height: bpy.props.IntProperty(name='Bake height', default=1024, min=1)
